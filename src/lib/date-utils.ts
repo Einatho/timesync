@@ -10,7 +10,6 @@ import {
   setHours,
   setMinutes,
 } from "date-fns";
-import { formatInTimeZone, toZonedTime, fromZonedTime } from "date-fns-tz";
 
 // Format a date as YYYY-MM-DD
 export function formatDateKey(date: Date): string {
@@ -69,15 +68,25 @@ export function createDateTime(dateKey: string, hour: number, minute: number): D
   return date;
 }
 
+// Helper: Get timezone offset in minutes for a given timezone and date
+function getTimezoneOffsetMinutes(date: Date, timezone: string): number {
+  const utcDate = new Date(date.toLocaleString("en-US", { timeZone: "UTC" }));
+  const tzDate = new Date(date.toLocaleString("en-US", { timeZone: timezone }));
+  return (tzDate.getTime() - utcDate.getTime()) / 60000;
+}
+
 // Convert a local datetime to UTC ISO string
 export function localToUTC(date: Date, timezone: string): string {
-  const utcDate = fromZonedTime(date, timezone);
+  const offsetMinutes = getTimezoneOffsetMinutes(date, timezone);
+  const utcDate = new Date(date.getTime() - offsetMinutes * 60000);
   return utcDate.toISOString();
 }
 
-// Convert a UTC ISO string to local datetime
+// Convert a UTC ISO string to local datetime in a specific timezone
 export function utcToLocal(isoString: string, timezone: string): Date {
-  return toZonedTime(new Date(isoString), timezone);
+  const date = new Date(isoString);
+  const offsetMinutes = getTimezoneOffsetMinutes(date, timezone);
+  return new Date(date.getTime() + offsetMinutes * 60000);
 }
 
 // Format a datetime for storage (UTC ISO string)
@@ -92,17 +101,35 @@ export function formatForDisplay(
   timezone: string,
   formatStr: string = "h:mm a"
 ): string {
-  return formatInTimeZone(new Date(isoString), timezone, formatStr);
+  const date = new Date(isoString);
+  
+  // Use Intl.DateTimeFormat for timezone-aware formatting
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: timezone,
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  };
+  
+  // For simple time format, use Intl
+  if (formatStr === "h:mm a") {
+    return new Intl.DateTimeFormat("en-US", options).format(date);
+  }
+  
+  // For other formats, convert to zoned time and use date-fns
+  const zonedDate = utcToLocal(isoString, timezone);
+  return format(zonedDate, formatStr);
 }
 
 // Get the date key from a UTC ISO string in a specific timezone
 export function getDateKeyFromUTC(isoString: string, timezone: string): string {
-  return formatInTimeZone(new Date(isoString), timezone, "yyyy-MM-dd");
+  const zonedDate = utcToLocal(isoString, timezone);
+  return format(zonedDate, "yyyy-MM-dd");
 }
 
 // Get hour and minute from a UTC ISO string in a specific timezone
 export function getTimeFromUTC(isoString: string, timezone: string): { hour: number; minute: number } {
-  const zonedDate = toZonedTime(new Date(isoString), timezone);
+  const zonedDate = utcToLocal(isoString, timezone);
   return {
     hour: zonedDate.getHours(),
     minute: zonedDate.getMinutes(),
@@ -142,8 +169,16 @@ export function getUserTimezone(): string {
 // Format timezone for display
 export function formatTimezone(timezone: string): string {
   const now = new Date();
-  const offset = formatInTimeZone(now, timezone, "xxx");
+  
+  // Get the offset string using Intl
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: timezone,
+    timeZoneName: "shortOffset",
+  });
+  const parts = formatter.formatToParts(now);
+  const offsetPart = parts.find(p => p.type === "timeZoneName");
+  const offset = offsetPart?.value?.replace("GMT", "") || "";
+  
   const name = timezone.replace(/_/g, " ").split("/").pop() || timezone;
-  return `${name} (GMT${offset})`;
+  return `${name} (GMT${offset || "+0"})`;
 }
-
