@@ -22,13 +22,11 @@ import {
   deleteTimeSlotsForParticipant,
   getAggregatedAvailability,
 } from "@/lib/storage";
-import { generateId, getParticipantColor, getCellKey } from "@/lib/utils";
-import { formatForStorage, getUserTimezone } from "@/lib/date-utils";
+import { generateId, getParticipantColor } from "@/lib/utils";
 import { Poll, Participant, TimeSlot } from "@/types";
 import {
   Users,
   Calendar,
-  Clock,
   BarChart3,
   Save,
   Check,
@@ -78,18 +76,12 @@ export default function PollPage({ params }: PageProps) {
   // Load participant's existing selections when they join
   const loadParticipantSelections = useCallback((participant: Participant) => {
     const slots = getTimeSlotsByParticipant(participant.id);
-    const timezone = getUserTimezone();
     
     const selectedKeys = new Set<string>();
     slots.forEach((slot) => {
-      // Convert UTC to local for display
-      const date = new Date(slot.dateTime);
-      const localDate = new Date(date.toLocaleString("en-US", { timeZone: timezone }));
-      const dateKey = `${localDate.getFullYear()}-${String(localDate.getMonth() + 1).padStart(2, "0")}-${String(localDate.getDate()).padStart(2, "0")}`;
-      const hour = localDate.getHours();
-      const minute = localDate.getMinutes();
-      const key = getCellKey(dateKey, hour, minute);
-      selectedKeys.add(key);
+      // Use the date portion of the dateTime as the key
+      const dateKey = slot.dateTime.split("T")[0];
+      selectedKeys.add(dateKey);
     });
     
     setSelectedSlots(selectedKeys);
@@ -134,27 +126,20 @@ export default function PollPage({ params }: PageProps) {
     setSaveSuccess(false);
 
     try {
-      const timezone = getUserTimezone();
-
       // Delete existing time slots for this participant
       deleteTimeSlotsForParticipant(currentParticipant.id);
 
-      // Create new time slots
+      // Create new time slots (one per selected day)
       const newSlots: TimeSlot[] = [];
-      selectedSlots.forEach((cellKey) => {
-        const parts = cellKey.split("-");
-        const dateKey = `${parts[0]}-${parts[1]}-${parts[2]}`;
-        const [hourStr, minuteStr] = parts[3].split(":");
-        const hour = parseInt(hourStr, 10);
-        const minute = parseInt(minuteStr, 10);
-
-        const utcDateTime = formatForStorage(dateKey, hour, minute, timezone);
+      selectedSlots.forEach((dateKey) => {
+        // Store as ISO date string with T00:00:00.000Z to represent the whole day
+        const dateTime = `${dateKey}T00:00:00.000Z`;
 
         newSlots.push({
           id: generateId(),
           participantId: currentParticipant.id,
           pollId: poll.id,
-          dateTime: utcDateTime,
+          dateTime,
         });
       });
 
@@ -208,10 +193,6 @@ export default function PollPage({ params }: PageProps) {
             <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
               <Calendar className="h-3.5 w-3.5" />
               {poll.dates.length} day{poll.dates.length !== 1 ? "s" : ""}
-            </div>
-            <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
-              <Clock className="h-3.5 w-3.5" />
-              {poll.timeSlotDuration} min slots
             </div>
             <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-medium text-slate-600">
               <Users className="h-3.5 w-3.5" />
@@ -285,7 +266,7 @@ export default function PollPage({ params }: PageProps) {
                     <div>
                       <CardTitle>Select Your Availability</CardTitle>
                       <CardDescription>
-                        Click and drag to select when you&apos;re free
+                        Click on the days when you&apos;re available
                       </CardDescription>
                     </div>
                     <Button
@@ -327,11 +308,11 @@ export default function PollPage({ params }: PageProps) {
                   <div className="mb-4 flex flex-wrap items-center gap-4 text-sm text-slate-600">
                     <div className="flex items-center gap-2">
                       <div className="h-4 w-4 rounded bg-slate-100" />
-                      <span>Not selected</span>
+                      <span>Not available</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="h-4 w-4 rounded bg-emerald-500" />
-                      <span>Your availability</span>
+                      <span>Available</span>
                     </div>
                   </div>
 
@@ -381,8 +362,8 @@ export default function PollPage({ params }: PageProps) {
               <CardContent className="pt-6">
                 <h4 className="font-medium text-slate-900 mb-3">💡 Quick Tips</h4>
                 <ul className="space-y-2 text-sm text-slate-600">
-                  <li>• Click and drag to select multiple slots</li>
-                  <li>• Click on selected slots to deselect</li>
+                  <li>• Click on days to select when you&apos;re available</li>
+                  <li>• Click again to deselect a day</li>
                   <li>• Don&apos;t forget to save your changes</li>
                   <li>• View results to see everyone&apos;s availability</li>
                 </ul>

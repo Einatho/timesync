@@ -127,9 +127,11 @@ export function getAggregatedAvailability(pollId: string): Map<string, Participa
     .forEach((slot) => {
       const participant = participantMap.get(slot.participantId);
       if (participant) {
-        const existing = availability.get(slot.dateTime) || [];
+        // Extract just the date portion (YYYY-MM-DD) from the dateTime
+        const dateKey = slot.dateTime.split("T")[0];
+        const existing = availability.get(dateKey) || [];
         existing.push(participant);
-        availability.set(slot.dateTime, existing);
+        availability.set(dateKey, existing);
       }
     });
   

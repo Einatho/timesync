@@ -3,14 +3,12 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/shared/header";
-import { TimezoneIndicator } from "@/components/shared/timezone-indicator";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { DatePicker } from "@/components/poll/date-picker";
-import { TimeRangeSelector, SlotDurationSelector } from "@/components/poll/time-range-selector";
 import { savePoll } from "@/lib/storage";
 import { formatDateKey, getUserTimezone } from "@/lib/date-utils";
 import { generateId } from "@/lib/utils";
@@ -18,14 +16,13 @@ import {
   ArrowLeft,
   ArrowRight,
   Calendar,
-  Clock,
   FileText,
   Check,
   Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2;
 
 export default function CreatePollPage() {
   const router = useRouter();
@@ -36,9 +33,6 @@ export default function CreatePollPage() {
   const [description, setDescription] = useState("");
   const [creatorName, setCreatorName] = useState("");
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
-  const [startHour, setStartHour] = useState(9);
-  const [endHour, setEndHour] = useState(17);
-  const [slotDuration, setSlotDuration] = useState<30 | 60>(60);
 
   const [isCreating, setIsCreating] = useState(false);
 
@@ -47,7 +41,7 @@ export default function CreatePollPage() {
   const canCreate = canProceedFromStep1 && canProceedFromStep2;
 
   const handleNext = () => {
-    if (step < 3) setStep((step + 1) as Step);
+    if (step < 2) setStep((step + 1) as Step);
   };
 
   const handleBack = () => {
@@ -66,9 +60,9 @@ export default function CreatePollPage() {
       creatorName: creatorName.trim(),
       createdAt: new Date().toISOString(),
       dates: selectedDates.map(formatDateKey).sort(),
-      timeSlotDuration: slotDuration,
-      startHour,
-      endHour,
+      timeSlotDuration: 1440, // Full day (24 hours * 60 minutes)
+      startHour: 0,
+      endHour: 24,
       timezone: getUserTimezone(),
     };
 
@@ -83,7 +77,6 @@ export default function CreatePollPage() {
   const steps = [
     { num: 1, title: "Details", icon: FileText },
     { num: 2, title: "Dates", icon: Calendar },
-    { num: 3, title: "Time", icon: Clock },
   ];
 
   return (
@@ -92,7 +85,7 @@ export default function CreatePollPage() {
       <main className="container mx-auto max-w-2xl px-4 py-8 md:py-12">
         {/* Progress Steps */}
         <div className="mb-8">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-center">
             {steps.map((s, idx) => (
               <div key={s.num} className="flex items-center">
                 <div className="flex flex-col items-center">
@@ -138,12 +131,10 @@ export default function CreatePollPage() {
             <CardTitle>
               {step === 1 && "Poll Details"}
               {step === 2 && "Select Dates"}
-              {step === 3 && "Time Settings"}
             </CardTitle>
             <CardDescription>
               {step === 1 && "Give your poll a name and add your details"}
               {step === 2 && "Choose the dates you want to include in the poll"}
-              {step === 3 && "Set the time range and slot duration"}
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -185,59 +176,34 @@ export default function CreatePollPage() {
 
             {/* Step 2: Dates */}
             {step === 2 && (
-              <div className="flex justify-center">
-                <div className="w-full max-w-sm">
-                  <DatePicker
-                    selectedDates={selectedDates}
-                    onDatesChange={setSelectedDates}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Step 3: Time */}
-            {step === 3 && (
               <>
-                <div className="flex justify-center mb-4">
-                  <TimezoneIndicator />
-                </div>
-
-                <TimeRangeSelector
-                  startHour={startHour}
-                  endHour={endHour}
-                  onStartHourChange={setStartHour}
-                  onEndHourChange={setEndHour}
-                />
-
-                <div className="pt-4">
-                  <SlotDurationSelector
-                    duration={slotDuration}
-                    onDurationChange={setSlotDuration}
-                  />
+                <div className="flex justify-center">
+                  <div className="w-full max-w-sm">
+                    <DatePicker
+                      selectedDates={selectedDates}
+                      onDatesChange={setSelectedDates}
+                    />
+                  </div>
                 </div>
 
                 {/* Preview */}
-                <div className="rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-4 mt-6">
-                  <h4 className="font-medium text-slate-900 mb-2">Poll Summary</h4>
-                  <ul className="space-y-1 text-sm text-slate-600">
-                    <li>
-                      <span className="text-slate-500">Title:</span>{" "}
-                      <span className="font-medium">{title}</span>
-                    </li>
-                    <li>
-                      <span className="text-slate-500">Dates:</span>{" "}
-                      <span className="font-medium">
-                        {selectedDates.length} day{selectedDates.length !== 1 ? "s" : ""}
-                      </span>
-                    </li>
-                    <li>
-                      <span className="text-slate-500">Time slots:</span>{" "}
-                      <span className="font-medium">
-                        {((endHour - startHour) * 60) / slotDuration} slots per day
-                      </span>
-                    </li>
-                  </ul>
-                </div>
+                {selectedDates.length > 0 && (
+                  <div className="rounded-xl border-2 border-dashed border-emerald-200 bg-emerald-50/50 p-4 mt-6">
+                    <h4 className="font-medium text-slate-900 mb-2">Poll Summary</h4>
+                    <ul className="space-y-1 text-sm text-slate-600">
+                      <li>
+                        <span className="text-slate-500">Title:</span>{" "}
+                        <span className="font-medium">{title}</span>
+                      </li>
+                      <li>
+                        <span className="text-slate-500">Dates:</span>{" "}
+                        <span className="font-medium">
+                          {selectedDates.length} day{selectedDates.length !== 1 ? "s" : ""} selected
+                        </span>
+                      </li>
+                    </ul>
+                  </div>
+                )}
               </>
             )}
 
@@ -253,13 +219,10 @@ export default function CreatePollPage() {
                 Back
               </Button>
 
-              {step < 3 ? (
+              {step < 2 ? (
                 <Button
                   onClick={handleNext}
-                  disabled={
-                    (step === 1 && !canProceedFromStep1) ||
-                    (step === 2 && !canProceedFromStep2)
-                  }
+                  disabled={!canProceedFromStep1}
                   className="gap-2"
                 >
                   Next

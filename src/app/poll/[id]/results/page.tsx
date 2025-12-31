@@ -22,7 +22,6 @@ import {
   Trophy,
 } from "lucide-react";
 import { format, parseISO } from "date-fns";
-import { formatTime } from "@/lib/utils";
 
 interface PageProps {
   params: { id: string };
@@ -69,14 +68,8 @@ export default function ResultsPage({ params }: PageProps) {
   }, [params.id, router]);
 
   const parseSlotKey = (key: string) => {
-    const parts = key.split("-");
-    const dateKey = `${parts[0]}-${parts[1]}-${parts[2]}`;
-    const [hourStr, minuteStr] = parts[3].split(":");
-    return {
-      dateKey,
-      hour: parseInt(hourStr, 10),
-      minute: parseInt(minuteStr, 10),
-    };
+    // Key is just the date in YYYY-MM-DD format
+    return { dateKey: key };
   };
 
   if (!poll) {
@@ -137,7 +130,7 @@ export default function ResultsPage({ params }: PageProps) {
                 <CardContent>
                   <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
                     {bestSlots.map((slot) => {
-                      const { dateKey, hour, minute } = parseSlotKey(slot.key);
+                      const { dateKey } = parseSlotKey(slot.key);
                       const date = parseISO(dateKey);
                       return (
                         <div
@@ -149,10 +142,7 @@ export default function ResultsPage({ params }: PageProps) {
                           </div>
                           <div>
                             <p className="font-medium text-slate-900">
-                              {format(date, "EEE, MMM d")}
-                            </p>
-                            <p className="text-sm text-slate-600">
-                              {formatTime(hour, minute)}
+                              {format(date, "EEEE, MMM d, yyyy")}
                             </p>
                           </div>
                         </div>
