@@ -13,13 +13,13 @@ export function generateId(): string {
 
 // Format a date for display
 export function formatDate(date: Date, format: "short" | "long" | "weekday" = "short"): string {
-  const options: Intl.DateTimeFormatOptions = {
+  const formatOptions = {
     short: { month: "short", day: "numeric" },
     long: { weekday: "long", month: "long", day: "numeric" },
     weekday: { weekday: "short", month: "short", day: "numeric" },
-  }[format];
+  } as const;
   
-  return date.toLocaleDateString("en-US", options);
+  return date.toLocaleDateString("en-US", formatOptions[format]);
 }
 
 // Format time for display (12-hour format)
