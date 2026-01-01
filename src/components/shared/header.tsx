@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Calendar, Sparkles } from "lucide-react";
+import { Calendar, Sparkles, Plane } from "lucide-react";
 
 export function Header() {
   return (
@@ -17,13 +17,20 @@ export function Header() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-4">
+        <nav className="flex items-center gap-2 sm:gap-4">
+          <Link
+            href="/trips"
+            className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-600 transition-all hover:bg-slate-100 hover:text-slate-900"
+          >
+            <Plane className="h-4 w-4" />
+            <span className="hidden sm:inline">My Trips</span>
+          </Link>
           <Link
             href="/create"
-            className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-5 py-2 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95"
+            className="inline-flex items-center gap-2 rounded-full bg-emerald-500 px-4 sm:px-5 py-2 text-sm font-medium text-white shadow-lg shadow-emerald-500/25 transition-all hover:bg-emerald-600 hover:shadow-xl hover:shadow-emerald-500/30 active:scale-95"
           >
             <Sparkles className="h-4 w-4" />
-            New Poll
+            <span className="hidden sm:inline">New Trip</span>
           </Link>
         </nav>
       </div>

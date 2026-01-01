@@ -4,6 +4,7 @@ export interface Poll {
   id: string;
   title: string;
   description?: string;
+  heroImage?: string; // URL to a hero image for the poll
   createdAt: string;
   creatorName: string;
   dates: string[]; // Array of dates in YYYY-MM-DD format

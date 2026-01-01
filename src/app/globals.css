@@ -144,3 +144,8 @@
 .delay-400 { animation-delay: 400ms; }
 .delay-500 { animation-delay: 500ms; }
 
+/* Participant color hover effect */
+.hover-cell:hover {
+  background-color: var(--hover-bg, #f1f5f9) !important;
+}
+

@@ -41,7 +41,7 @@ export default function HomePage() {
 
               {/* Subtitle */}
               <p className="mb-10 max-w-2xl text-lg text-slate-600 md:text-xl animate-slide-up" style={{ animationDelay: "100ms" }}>
-                Schedule group meetings effortlessly. Create a poll, share the link,
+                Schedule group trips effortlessly. Create a trip, share the link,
                 and let everyone mark their availability. No accounts needed.
               </p>
 
@@ -49,7 +49,7 @@ export default function HomePage() {
               <div className="flex flex-col gap-4 sm:flex-row animate-slide-up" style={{ animationDelay: "200ms" }}>
                 <Link href="/create">
                   <Button size="lg" className="gap-2 text-base">
-                    Create a Poll
+                    Create a Trip
                     <ArrowRight className="h-5 w-5" />
                   </Button>
                 </Link>
@@ -88,8 +88,8 @@ export default function HomePage() {
             <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
               <FeatureCard
                 icon={<MousePointerClick className="h-6 w-6" />}
-                title="Drag to Select"
-                description="Click and drag to quickly mark your available time slots. Works on both desktop and mobile."
+                title="Click to Select"
+                description="Simply click on the days you're available. Quick and easy on both desktop and mobile."
                 delay={0}
               />
               <FeatureCard
@@ -118,8 +118,8 @@ export default function HomePage() {
               />
               <FeatureCard
                 icon={<Clock className="h-6 w-6" />}
-                title="Flexible Time Slots"
-                description="Choose 30-minute or 60-minute slots and customize the time range."
+                title="Day-Based Scheduling"
+                description="Focus on what matters - finding the right days that work for everyone."
                 delay={500}
               />
             </div>
@@ -134,7 +134,7 @@ export default function HomePage() {
                 Ready to Find Your Perfect Time?
               </h2>
               <p className="mb-8 text-lg text-emerald-100">
-                Create your first poll in seconds. It&apos;s completely free.
+                Create your first trip in seconds. It&apos;s completely free.
               </p>
               <Link href="/create">
                 <Button
@@ -142,7 +142,7 @@ export default function HomePage() {
                   className="gap-2 bg-white text-emerald-600 hover:bg-emerald-50 shadow-xl text-base"
                 >
                   <Calendar className="h-5 w-5" />
-                  Create a Poll Now
+                  Create a Trip Now
                 </Button>
               </Link>
             </div>
@@ -196,17 +196,15 @@ function FeatureCard({
 }
 
 function PreviewGrid() {
-  const days = ["Mon 6", "Tue 7", "Wed 8", "Thu 9", "Fri 10"];
-  const times = ["9 AM", "10 AM", "11 AM", "12 PM", "1 PM"];
-  
-  // Sample availability data (percentage filled)
-  const sampleData: Record<string, number> = {
-    "0-0": 100, "0-1": 75, "0-2": 50, "0-3": 25, "0-4": 50,
-    "1-0": 75, "1-1": 100, "1-2": 100, "1-3": 75, "1-4": 25,
-    "2-0": 50, "2-1": 100, "2-2": 100, "2-3": 100, "2-4": 75,
-    "3-0": 25, "3-1": 50, "3-2": 75, "3-3": 75, "3-4": 100,
-    "4-0": 0, "4-1": 25, "4-2": 50, "4-3": 50, "4-4": 75,
-  };
+  // Sample days with availability data
+  const days = [
+    { day: "Mon", date: "6", month: "Jan", percentage: 100 },
+    { day: "Tue", date: "7", month: "Jan", percentage: 75 },
+    { day: "Wed", date: "8", month: "Jan", percentage: 100 },
+    { day: "Thu", date: "9", month: "Jan", percentage: 50 },
+    { day: "Fri", date: "10", month: "Jan", percentage: 25 },
+    { day: "Sat", date: "11", month: "Jan", percentage: 75 },
+  ];
 
   const getColor = (percentage: number) => {
     if (percentage === 0) return "bg-slate-100";
@@ -216,41 +214,39 @@ function PreviewGrid() {
     return "bg-emerald-500";
   };
 
+  const getTextColor = (percentage: number) => {
+    return percentage >= 75 ? "text-white" : "text-slate-900";
+  };
+
   return (
     <div className="overflow-x-auto">
-      <div className="min-w-[400px]">
-        {/* Header row */}
-        <div className="grid grid-cols-6 gap-1 mb-1">
-          <div className="h-12" />
-          {days.map((day) => (
-            <div
-              key={day}
-              className="flex h-12 flex-col items-center justify-center rounded-lg bg-slate-50 text-xs font-medium text-slate-600"
-            >
-              <span className="text-slate-400">{day.split(" ")[0]}</span>
-              <span className="text-slate-700">{day.split(" ")[1]}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* Time rows */}
-        {times.map((time, timeIdx) => (
-          <div key={time} className="grid grid-cols-6 gap-1 mb-1">
-            <div className="flex h-10 items-center justify-end pr-3 text-xs font-medium text-slate-500">
-              {time}
-            </div>
-            {days.map((_, dayIdx) => {
-              const key = `${timeIdx}-${dayIdx}`;
-              const percentage = sampleData[key] || 0;
-              return (
-                <div
-                  key={key}
-                  className={`h-10 rounded-lg transition-all duration-200 ${getColor(percentage)} ${
-                    percentage === 100 ? "ring-2 ring-amber-400 ring-offset-1" : ""
-                  }`}
-                />
-              );
-            })}
+      {/* Day cards grid */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        {days.map((item, idx) => (
+          <div
+            key={idx}
+            className={`flex flex-col items-center justify-center rounded-xl p-4 transition-all duration-200 ${getColor(item.percentage)} ${
+              item.percentage === 100 ? "ring-2 ring-amber-400 ring-offset-2" : ""
+            }`}
+          >
+            <span className={`text-xs font-medium ${item.percentage >= 75 ? "text-emerald-100" : "text-slate-500"}`}>
+              {item.day}
+            </span>
+            <span className={`text-2xl font-bold ${getTextColor(item.percentage)}`}>
+              {item.date}
+            </span>
+            <span className={`text-xs ${item.percentage >= 75 ? "text-emerald-100" : "text-slate-400"}`}>
+              {item.month}
+            </span>
+            {item.percentage > 0 && (
+              <span className={`mt-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                item.percentage >= 75 
+                  ? "bg-white/30 text-white" 
+                  : "bg-emerald-100 text-emerald-700"
+              }`}>
+                {item.percentage === 100 ? "8/8" : item.percentage === 75 ? "6/8" : item.percentage === 50 ? "4/8" : "2/8"}
+              </span>
+            )}
           </div>
         ))}
       </div>
@@ -271,7 +267,7 @@ function PreviewGrid() {
         </div>
         <div className="flex items-center gap-1.5">
           <div className="h-3 w-3 rounded bg-emerald-500 ring-2 ring-amber-400 ring-offset-1" />
-          <span>Best Time</span>
+          <span>Best Day</span>
         </div>
       </div>
     </div>

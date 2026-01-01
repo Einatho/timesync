@@ -8,10 +8,10 @@ const outfit = Outfit({
 });
 
 export const metadata: Metadata = {
-  title: "TimeSync - Find the Perfect Meeting Time",
+  title: "TimeSync - Find the Perfect Trip Time",
   description:
-    "A modern group scheduling app to find when everyone is available. Create polls, share with your team, and discover the best meeting times instantly.",
-  keywords: ["scheduling", "meeting", "poll", "doodle", "when2meet", "availability"],
+    "A modern group scheduling app to find when everyone is available. Create trips, share with your group, and discover the best travel times instantly.",
+  keywords: ["scheduling", "trip", "travel", "doodle", "when2meet", "availability"],
 };
 
 export default function RootLayout({

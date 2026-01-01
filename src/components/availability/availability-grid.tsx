@@ -15,6 +15,24 @@ interface AvailabilityGridProps {
   allParticipants: Participant[];
   allAvailability: Map<string, Participant[]>;
   isViewMode?: boolean;
+  highlightedDates?: Set<string>;
+}
+
+// Helper to get a lighter/darker version of a hex color
+function adjustColor(hex: string, percent: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = Math.min(255, Math.max(0, (num >> 16) + percent));
+  const g = Math.min(255, Math.max(0, ((num >> 8) & 0x00ff) + percent));
+  const b = Math.min(255, Math.max(0, (num & 0x0000ff) + percent));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
+function hexToRgba(hex: string, alpha: number): string {
+  const num = parseInt(hex.replace("#", ""), 16);
+  const r = num >> 16;
+  const g = (num >> 8) & 0x00ff;
+  const b = num & 0x0000ff;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
 }
 
 export function AvailabilityGrid({
@@ -25,6 +43,7 @@ export function AvailabilityGrid({
   allParticipants,
   allAvailability,
   isViewMode = false,
+  highlightedDates,
 }: AvailabilityGridProps) {
   const gridRef = useRef<HTMLDivElement>(null);
 
@@ -67,20 +86,39 @@ export function AvailabilityGrid({
     []
   );
 
+  // Color scheme: Green for ALL available, Orange/Amber gradient for partial availability
   const getHeatmapColor = (count: number, total: number) => {
     if (total === 0 || count === 0) return "bg-slate-50";
+    
+    // 100% availability - everyone can attend - use GREEN
+    if (count === total) {
+      return "bg-emerald-400";
+    }
+    
+    // Partial availability - use ORANGE/AMBER gradient
     const percentage = count / total;
-    if (percentage <= 0.2) return "bg-emerald-100";
-    if (percentage <= 0.4) return "bg-emerald-200";
-    if (percentage <= 0.6) return "bg-emerald-300";
-    if (percentage <= 0.8) return "bg-emerald-400";
-    return "bg-emerald-500";
+    if (percentage < 0.25) return "bg-orange-100";
+    if (percentage < 0.5) return "bg-orange-200";
+    if (percentage < 0.75) return "bg-amber-300";
+    return "bg-amber-400"; // High but not 100%
+  };
+  
+  // Get border color for cells (used for empty cells to have visible boundary)
+  const getCellBorderClass = (count: number, total: number, isBest: boolean, isHighlighted: boolean) => {
+    if (isHighlighted) return "border-emerald-600"; // Green highlight to match the green cells
+    if (isBest) return "border-emerald-500";
+    if (count === 0 || total === 0) return "border-slate-200"; // Empty cells get a subtle border
+    return "border-transparent";
   };
 
   const isBestSlot = (cellKey: string) => {
     const availability = allAvailability.get(cellKey) || [];
     return availability.length === allParticipants.length && allParticipants.length > 0;
   };
+
+  // Get the participant's color or default to emerald
+  const participantColor = currentParticipant?.color || "#10B981";
+  const lighterColor = adjustColor(participantColor, 60);
 
   return (
     <div
@@ -106,35 +144,60 @@ export function AvailabilityGrid({
           const isBeingSelected = selectedCells.has(cellKey);
           const availability = allAvailability.get(cellKey) || [];
           const isBest = isBestSlot(cellKey);
+          const isHighlighted = highlightedDates?.has(cellKey) || false;
 
-          // Determine cell state
+          // Determine cell styling based on state
+          let cellStyle: React.CSSProperties = {};
           let cellClass = "";
+          
           if (isViewMode) {
             // Heatmap mode
             cellClass = getHeatmapColor(availability.length, allParticipants.length);
           } else {
-            // Selection mode
+            // Selection mode - use participant's color
             if (isBeingSelected) {
-              cellClass =
-                selectionMode === "add"
-                  ? "bg-emerald-300 ring-2 ring-emerald-500"
-                  : "bg-red-200 ring-2 ring-red-400";
+              if (selectionMode === "add") {
+                cellStyle = { 
+                  backgroundColor: lighterColor,
+                  boxShadow: `0 0 0 2px ${participantColor}`,
+                };
+              } else {
+                cellClass = "bg-red-200 ring-2 ring-red-400";
+              }
             } else if (isSelected) {
-              cellClass = "bg-emerald-500 text-white";
+              cellStyle = { backgroundColor: participantColor };
+              cellClass = "text-white";
             } else {
-              cellClass = "bg-slate-100 hover:bg-emerald-100";
+              cellStyle = {};
+              cellClass = "bg-slate-100";
             }
           }
+
+          // Calculate hover background color for unselected cells
+          const hoverStyle = !isViewMode && !isSelected && !isBeingSelected 
+            ? hexToRgba(participantColor, 0.15)
+            : undefined;
+
+          const borderClass = isViewMode 
+            ? getCellBorderClass(availability.length, allParticipants.length, isBest, isHighlighted)
+            : isHighlighted ? "border-amber-500" : "border-transparent";
 
           const cellContent = (
             <div
               data-cell-key={cellKey}
               className={cn(
-                "flex flex-col items-center justify-center rounded-xl p-4 transition-all duration-100 cursor-pointer relative min-h-[100px]",
+                "flex flex-col items-center justify-center rounded-xl p-4 transition-all duration-200 cursor-pointer relative min-h-[100px] w-full border-2",
                 cellClass,
-                isBest && "ring-2 ring-amber-400 ring-offset-2",
-                !isViewMode && !isSelecting && "hover:scale-105 hover:z-10 hover:shadow-lg"
+                borderClass,
+                isHighlighted && "shadow-lg shadow-emerald-300 z-10",
+                !isViewMode && !isSelecting && "hover:scale-105 hover:z-10 hover:shadow-lg",
+                !isViewMode && !isSelected && !isBeingSelected && "hover-cell"
               )}
+              style={{
+                ...cellStyle,
+                // @ts-ignore - CSS custom property
+                "--hover-bg": hoverStyle,
+              }}
               onMouseDown={() => {
                 if (!isViewMode) {
                   handleCellMouseDown(cellKey, isSelected);
@@ -153,19 +216,19 @@ export function AvailabilityGrid({
             >
               <span className={cn(
                 "text-xs font-medium",
-                isSelected && !isViewMode ? "text-emerald-100" : "text-slate-500"
+                (isSelected || isBeingSelected) && !isViewMode ? "text-white/80" : "text-slate-500"
               )}>
                 {format(date, "EEE")}
               </span>
               <span className={cn(
                 "text-2xl font-bold",
-                isSelected && !isViewMode ? "text-white" : "text-slate-900"
+                (isSelected || isBeingSelected) && !isViewMode ? "text-white" : "text-slate-900"
               )}>
                 {format(date, "d")}
               </span>
               <span className={cn(
                 "text-xs",
-                isSelected && !isViewMode ? "text-emerald-100" : "text-slate-400"
+                (isSelected || isBeingSelected) && !isViewMode ? "text-white/80" : "text-slate-400"
               )}>
                 {format(date, "MMM yyyy")}
               </span>
@@ -175,9 +238,11 @@ export function AvailabilityGrid({
                 <span
                   className={cn(
                     "mt-2 text-sm font-bold px-2 py-0.5 rounded-full",
-                    availability.length / allParticipants.length > 0.5
-                      ? "bg-white/30 text-white"
-                      : "bg-emerald-100 text-emerald-700"
+                    availability.length === allParticipants.length
+                      ? "bg-white/30 text-white" // Green background - white badge
+                      : availability.length / allParticipants.length >= 0.5
+                        ? "bg-white/40 text-amber-900" // Amber background
+                        : "bg-orange-50 text-orange-700" // Orange background
                   )}
                 >
                   {availability.length}/{allParticipants.length}
